@@ -1,0 +1,235 @@
+# Azure DevOps Pipeline for Playwright Tests with Test Plans Integration
+# This pipeline runs Playwright tests and automatically reports results to Azure Test Plans
+
+# Runtime parameters - can be set when manually triggering the pipeline
+parameters:
+- name: testSuiteId
+  displayName: 'Test Suite ID'
+  type: string
+  default: '17665'
+  values:
+  - '17665'
+  - '17757'  # Replace with your second suite ID
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - tests/**
+      - utils/**
+      - playwright.config.ts
+      - package.json
+
+# Run on pull requests as well
+pr:
+  branches:
+    include:
+      - main
+      - develop
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  # CI mode - disables local auth file, tests will need to handle authentication
+  CI: true
+  
+  # Azure DevOps Test Plans Integration - ENABLED
+  AZURE_DEVOPS_INTEGRATION_ENABLED: true
+  
+  # Base URL for the application
+  BASE_URL: 'https://cehub-dev.powerappsportals.com/'
+  
+  # These are automatically available in Azure Pipelines:
+  # AZURE_DEVOPS_ORG: $(System.TeamFoundation.CollectionUri) 
+  # AZURE_DEVOPS_PROJECT: $(System.TeamProject)
+  # But we need to set them explicitly for our custom reporter
+  
+  # Set your Test Plan ID
+  AZURE_DEVOPS_TEST_PLAN_ID: '17662'
+  # Test Suite ID - will be overridden by parameter when manually triggered
+  AZURE_DEVOPS_TEST_SUITE_ID: ${{ parameters.testSuiteId }}
+  
+  # Node version to use
+  NODE_VERSION: '18.x'
+  
+  # Login credentials (set as secret variables in pipeline settings)
+  # USER_EMAIL: set as secret variable
+  # USER_PASSWORD: set as secret variable
+
+steps:
+# Step 1: Install Node.js
+- task: NodeTool@0
+  displayName: 'Install Node.js $(NODE_VERSION)'
+  inputs:
+    versionSpec: '$(NODE_VERSION)'
+
+# Step 2: Install npm dependencies
+- script: |
+    npm ci
+  displayName: 'Install npm dependencies'
+
+# Step 3: Cache Playwright browsers
+- task: Cache@2
+  displayName: 'Cache Playwright browsers'
+  inputs:
+    key: 'playwright | "$(Agent.OS)" | package-lock.json'
+    path: $(HOME)/.cache/ms-playwright
+    restoreKeys: |
+      playwright | "$(Agent.OS)"
+
+# Step 4: Install Playwright browsers (uses cache if available)
+- script: |
+    npx playwright install --with-deps msedge
+  displayName: 'Install Playwright browsers'
+
+# Step 5: Set Azure DevOps environment variables from pipeline variables
+- script: |
+    echo "##vso[task.setvariable variable=AZURE_DEVOPS_ORG]QuEST-CET"
+    echo "##vso[task.setvariable variable=AZURE_DEVOPS_PROJECT]CEHub"
+    echo "##vso[task.setvariable variable=AZURE_DEVOPS_PAT]$(AZURE_DEVOPS_PAT)"
+    echo "Azure DevOps Org: QuEST-CET"
+    echo "Azure DevOps Project: CEHub"
+    echo "Test Plan ID: $(AZURE_DEVOPS_TEST_PLAN_ID)"
+    echo "Test Suite ID: $(AZURE_DEVOPS_TEST_SUITE_ID)"
+    echo "Integration Enabled: $(AZURE_DEVOPS_INTEGRATION_ENABLED)"
+  displayName: 'Set Azure DevOps environment variables'
+
+# Step 6: Create playwright auth directory
+- script: |
+    echo "Creating playwright/.auth directory..."
+    mkdir -p playwright/.auth
+    echo "✓ Directory created"
+  displayName: 'Setup Authentication Directory'
+
+# Step 7: Verify Azure DevOps configuration before running tests
+- script: |
+    echo "============================================"
+    echo "Verifying Azure DevOps Test Plans Configuration"
+    echo "============================================"
+    if [ -z "$AZURE_DEVOPS_PAT" ]; then
+      echo "❌ ERROR: AZURE_DEVOPS_PAT is not set!"
+      echo "Please configure it as a secret variable in pipeline settings"
+      exit 1
+    else
+      echo "✓ PAT token is configured"
+    fi
+    
+    if [ -z "$USER_EMAIL" ] || [ -z "$USER_PASSWORD" ]; then
+      echo "❌ ERROR: USER_EMAIL or USER_PASSWORD not configured!"
+      echo "Please configure these as secret variables in pipeline settings"
+      exit 1
+    else
+      echo "✓ Login credentials configured"
+    fi
+    
+    echo "✓ Organization: $AZURE_DEVOPS_ORG"
+    echo "✓ Project: $AZURE_DEVOPS_PROJECT"
+    echo "✓ Test Plan ID: $AZURE_DEVOPS_TEST_PLAN_ID"
+    echo "✓ Test Suite ID: $AZURE_DEVOPS_TEST_SUITE_ID"
+    echo "✓ Integration Enabled: $AZURE_DEVOPS_INTEGRATION_ENABLED"
+    echo "============================================"
+  displayName: 'Verify Configuration'
+  env:
+    AZURE_DEVOPS_PAT: $(AZURE_DEVOPS_PAT)
+    USER_EMAIL: $(USER_EMAIL)
+    USER_PASSWORD: $(USER_PASSWORD)
+
+# Step 8: Debug environment variables (without exposing secrets)
+- script: |
+    echo "Checking environment variables..."
+    if [ -z "$USER_EMAIL" ]; then
+      echo "❌ USER_EMAIL is NOT set"
+    else
+      echo "✓ USER_EMAIL is set"
+    fi
+    
+    if [ -z "$USER_PASSWORD" ]; then
+      echo "❌ USER_PASSWORD is NOT set"
+    else
+      echo "✓ USER_PASSWORD is set"
+    fi
+    
+    if [ -z "$BASE_URL" ]; then
+      echo "⚠ BASE_URL is not set (will use default)"
+    else
+      echo "✓ BASE_URL is set to: $BASE_URL"
+    fi
+  displayName: 'Debug Environment Variables'
+  env:
+    USER_EMAIL: $(USER_EMAIL)
+    USER_PASSWORD: $(USER_PASSWORD)
+    BASE_URL: $(BASE_URL)
+
+# Step 9: Run Playwright tests with Azure Test Plans integration
+- script: |
+    echo "Starting Playwright tests with Azure Test Plans integration..."
+    echo "Test Suite ID: $(AZURE_DEVOPS_TEST_SUITE_ID)"
+    
+    # Run tests based on test folder or pattern
+    # Suite 17665: Request Form tests
+    # Suite 17757: Speaker Profile tests
+    
+    if [ "$(AZURE_DEVOPS_TEST_SUITE_ID)" == "17757" ]; then
+      echo "Running Speaker Profile tests..."
+      npx playwright test "tests/Speaker Profile/"
+    elif [ "$(AZURE_DEVOPS_TEST_SUITE_ID)" == "17665" ]; then
+      echo "Running Request Form tests..."
+      npx playwright test "tests/Request Form/"
+    else
+      echo "Running all tests for suite $(AZURE_DEVOPS_TEST_SUITE_ID)..."
+      npx playwright test
+    fi
+  displayName: 'Run Playwright Tests'
+  env:
+    AZURE_DEVOPS_PAT: $(AZURE_DEVOPS_PAT)
+    USER_EMAIL: $(USER_EMAIL)
+    USER_PASSWORD: $(USER_PASSWORD)
+    BASE_URL: $(BASE_URL)
+  continueOnError: true
+
+# Step 10: Publish test results to Azure Pipelines (JUnit format)
+- task: PublishTestResults@2
+  displayName: 'Publish Test Results to Azure Pipelines'
+  inputs:
+    testResultsFormat: 'JUnit'
+    testResultsFiles: '**/test-results/results.xml'
+    testRunTitle: 'Playwright E2E Tests - $(Build.BuildNumber)'
+    mergeTestResults: true
+    failTaskOnFailedTests: true
+  condition: always()  # Always publish results, even if tests fail
+
+# Step 11: Publish HTML report as build artifact
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Playwright HTML Report'
+  inputs:
+    pathToPublish: 'playwright-report'
+    artifactName: 'playwright-html-report'
+  condition: always()  # Always publish report
+
+# Step 12: Publish screenshots and videos as artifacts
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Test Screenshots & Videos'
+  inputs:
+    pathToPublish: 'test-results'
+    artifactName: 'test-artifacts'
+  condition: always()
+
+# Step 13: Summary of results
+- script: |
+    echo "============================================"
+    echo "Pipeline Execution Summary"
+    echo "============================================"
+    echo "Build ID: $(Build.BuildId)"
+    echo "Build Number: $(Build.BuildNumber)"
+    echo "Source Branch: $(Build.SourceBranchName)"
+    echo "Commit: $(Build.SourceVersion)"
+    echo "Azure Test Plans Integration: ENABLED"
+    echo "Test Plan ID: $(AZURE_DEVOPS_TEST_PLAN_ID)"
+    echo "Test Suite ID: $(AZURE_DEVOPS_TEST_SUITE_ID)"
+    echo "============================================"
+  displayName: 'Pipeline Summary'
+  condition: always()

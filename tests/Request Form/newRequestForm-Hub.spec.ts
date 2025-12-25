@@ -1,0 +1,30 @@
+import { test, expect } from '@playwright/test';
+
+test('TC 17749: New Request Form – Hub Building', async ({ page }) => {
+await page.goto('https://cehub-dev.powerappsportals.com/');
+  await page.getByRole('combobox', { name: 'Microsoft Innovation Hub Location' }).click();
+  await page.getByRole('option', { name: 'Hub - St. Louis' }).click();
+  await page.getByRole('combobox', { name: 'Microsoft Innovation Hub Engagement Type' }).click();
+  await page.getByRole('option', { name: 'Executive Briefing' }).click();
+  await page.getByRole('button', { name: 'Microsoft Innovation Hub Book' }).click();
+  await page.getByRole('textbox', { name: 'Engagement Title0/100' }).click();
+  await page.getByRole('textbox', { name: 'Engagement Title0/100' }).fill('playwright Testing');
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Search Field' }).click();
+  await page.getByRole('textbox', { name: 'Search Field' }).fill('cisco');
+  await page.getByRole('textbox', { name: 'Search Field' }).press('Enter');
+  await page.getByRole('checkbox', { name: 'Select CISCO SYSTEMS checkbox', exact: true }).check();
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Engagement Goals is required0' }).dblclick();
+  await page.getByRole('textbox', { name: 'Engagement Goals is required0' }).fill('Test');
+  await page.getByRole('textbox', { name: 'Justification Text is' }).dblclick();
+  await page.getByRole('textbox', { name: 'Justification Text is' }).fill('Test');
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('checkbox', { name: 'I agree to the Hub - St.' }).check();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('combobox', { name: 'Search Engagement Owners' }).click();
+  await page.getByRole('combobox', { name: 'Search Engagement Owners' }).fill('Niraj Gupta');
+  await page.getByText('NGNiraj Guptav-nirajgupta@').click();
+  await page.getByRole('button', { name: 'Add Engagement Owner' }).click();
+  await page.getByRole('button', { name: 'Submit' }).click();
+});

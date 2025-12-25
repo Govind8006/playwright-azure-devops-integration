@@ -1,0 +1,45 @@
+import { test, expect } from '@playwright/test';
+
+test('TC 17666: New Request Form – EC Silicon Valley', async ({ page }) => {
+  await page.goto('https://cehub-dev.powerappsportals.com/');
+
+  await page.getByRole('combobox', { name: 'Executive Briefing Center Location' }).click();
+  await page.getByText('EC - SILICON VALLEY').click();
+  await page.getByRole('combobox', { name: 'Executive Briefing Center Engagement Type' }).click();
+  await page.getByText('Immersive Experience').click();
+  await page.getByRole('button', { name: 'Executive Briefing Center Book' }).click();
+  await page.getByRole('textbox', { name: 'Engagement Title0/100' }).click();
+  await page.getByRole('textbox', { name: 'Engagement Title0/100' }).fill('test different location');
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Search Field' }).click();
+  await page.getByRole('textbox', { name: 'Search Field' }).fill('casio');
+  await page.getByRole('textbox', { name: 'Search Field' }).press('Enter');
+  await page.getByRole('cell', { name: 'Select CASIOPEA DAURA SL' }).click();
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Engagement Goals is required0' }).click();
+  await page.getByRole('textbox', { name: 'Engagement Goals is required0' }).fill('testing different location');
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByText('Please Select').click();
+  await page.getByText('CEO, President, Owner, Board').click();
+  await page.getByRole('option', { name: 'Chief Architect/Architecture' }).click();
+  await page.getByText('CFO').click();
+  await page.getByText('IT Infrastructure').click();
+  await page.getByText('Development').click();
+  await page.getByRole('textbox', { name: 'What are Microsofts desired' }).click();
+  await page.getByRole('textbox', { name: 'What are the customer\'s' }).click();
+  await page.getByRole('textbox', { name: 'What are the customer\'s' }).fill('testing');
+  await page.getByRole('textbox', { name: 'What are Microsofts desired' }).click();
+  await page.getByRole('textbox', { name: 'What are Microsofts desired' }).fill('testing');
+  await page.getByRole('textbox', { name: 'Recent Microsoft Executive' }).click();
+  await page.getByRole('textbox', { name: 'Recent Microsoft Executive' }).fill('testing');
+  await page.getByRole('textbox', { name: 'What is the competitive' }).click();
+  await page.getByRole('textbox', { name: 'What is the competitive' }).fill('testing');
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('checkbox', { name: 'I agree to the EC - SILICON' }).check();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('combobox', { name: 'Search Engagement Owners' }).click();
+  await page.getByRole('combobox', { name: 'Search Engagement Owners' }).fill('Niraj Gupta');
+  await page.getByText('NGNiraj Guptav-nirajgupta@').click();
+  await page.getByRole('button', { name: 'Add Engagement Owner' }).click();
+  await page.getByRole('button', { name: 'Submit' }).click();
+});
